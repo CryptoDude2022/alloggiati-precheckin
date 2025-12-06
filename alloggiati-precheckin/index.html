@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pre Check-in – Alloggiati Web TXT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Flatpickr (datepicker in inglese) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <style>
+    :root {
+      --primary: #d33;
+      --border: #dddddd;
+      --bg: #f5f5f5;
+      --card-bg: #ffffff;
+    }
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: #222;
+    }
+    .wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+
+    /* LOGO */
+    .logo-title {
+      text-align:center;
+      font-size:26px;
+      font-weight:800;
+      color:#d33;
+      margin-bottom:12px;
+      letter-spacing:0.5px;
+    }
+
+    h1 {
+      font-size: 22px;
+      text-align: center;
+      margin: 0 0 4px;
+      color: var(--primary);
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 14px;
+      color: #555;
+      margin: 0 0 6px;
+    }
+    .required-note {
+      text-align:center;
+      font-size:12px;
+      color:#777;
+      margin-bottom:18px;
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 20px 0 8px;
+      border-left: 3px solid var(--primary);
+      padding-left: 8px;
+    }
+    .field { margin-bottom: 14px; }
+    .label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .required-star {
+      color: #d33;
+      font-weight: 700;
+      margin-left: 3px;
+    }
+    .input,
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+      background: #fff;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px rgba(211, 51, 51, 0.25);
+    }
+
+    .grid-2,
+    .grid-3 {
+      display: grid;
+      gap: 12px;
+    }
+    .grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    @media (max-width: 700px) {
+      .grid-3,
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .guest-block {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 16px 0;
+      background: #fafafa;
+    }
+    .guest-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .guest-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    /* REMOVE BUTTON ROUND */
+    .btn-remove {
+      padding: 6px 14px;
+      background: #d33;
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-remove:hover {
+      background: #b50000;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .btn-add {
+      width: 100%;
+      padding: 12px;
+      background: #eee;
+      font-size: 15px;
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 17px;
+      margin-top: 20px;
+      border-radius: 12px;
+    }
+    .status {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 14px;
+      min-height: 20px;
+    }
+    .status.ok { color: green; }
+    .status.error { color: #d33; }
+
+    /* Autocomplete dropdown */
+    .ac-wrapper { position: relative; }
+    .ac-list {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      background: #fff;
+      border: 1px solid #ccc;
+      max-height: 220px;
+      overflow-y: auto;
+      display: none;
+      z-index: 9999;
+    }
+    .ac-item {
+      padding: 8px 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+    }
+    .ac-item:hover {
+      background: #ffecec;
+    }
+
+    /* DATEPICKER STYLE */
+    .datepicker {
+      background: #fff url("data:image/svg+xml,%3Csvg width='16' height='16' fill='%23d33' viewBox='0 0 16 16'%3E%3Cpath d='M3 2a1 1 0 0 0-1 1v1h12V3a1 1 0 0 0-1-1H3zm12 3H1v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V5z'/%3E%3C/svg%3E") no-repeat right 12px center;
+      background-size: 18px;
+      cursor: pointer;
+    }
+
+    /* GDPR BOX */
+    .gdpr-card {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 1px solid #e6e6e6;
+      background: #ffffff;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+      font-size: 13px;
+    }
+    .gdpr-header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:8px;
+    }
+    .gdpr-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #d33;
+    }
+    .gdpr-toggle-btn {
+      border-radius: 999px;
+      border: 1px solid #d33;
+      background: #fff;
+      color: #d33;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor:pointer;
+    }
+    .gdpr-tabs {
+      display:flex;
+      gap:6px;
+      margin-bottom:8px;
+      margin-top:6px;
+    }
+    .gdpr-tab {
+      flex:0 0 auto;
+      padding:5px 10px;
+      border-radius:999px;
+      border:1px solid #ddd;
+      font-size:12px;
+      cursor:pointer;
+      background:#f7f7f7;
+      color:#555;
+    }
+    .gdpr-tab.active {
+      border-color:#d33;
+      background:#ffe9e9;
+      color:#b00000;
+      font-weight:600;
+    }
+    .gdpr-content {
+      margin-top:8px;
+      display:none;
+      max-height:0;
+      overflow:hidden;
+      transition:max-height 0.25s ease;
+    }
+    .gdpr-content.open {
+      display:block;
+      max-height:380px;
+    }
+    .gdpr-text {
+      font-size:13px;
+      line-height:1.5;
+      color:#444;
+    }
+    .gdpr-text p {
+      margin:4px 0;
+    }
+    .field-error {
+      color: #d33;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    .input-error {
+      border-color: #d33 !important;
+      box-shadow: 0 0 0 2px rgba(211,0,0,0.06) !important;
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+  <div class="card">
+
+    <div class="logo-title">LOVELY VENICE APARTMENTS</div>
+
+    <h1>Pre Check-in</h1>
+    <p class="subtitle">
+      Fill the form to generate the Alloggiati Web TXT file /<br>
+      Compila il modulo per generare il file TXT Alloggiati Web.
+    </p>
+    <p class="required-note">
+      Fields marked <span class="required-star">*</span> are required.  
+      Alcuni campi sono obbligatori solo per cittadini italiani (come indicato).
+    </p>
+
+    <form id="precheckinForm">
+
+      <div class="section-title">Apartment & Stay / Appartamento e soggiorno</div>
+
+      <div class="field">
+        <label class="label">Apartment / Appartamento<span class="required-star">*</span></label>
+        <select name="appartamento" class="input" required>
+          <option value="">Select… / Seleziona…</option>
+          <option value="Station Apartment">Station Apartment</option>
+          <option value="Skyline Apartment">Skyline Apartment</option>
+          <option value="Dream Studio">Dream Studio</option>
+          <option value="Sweet Dream Apartment">Sweet Dream Apartment</option>
+        </select>
+      </div>
+
+      <div class="grid-3">
+        <div class="field">
+          <label class="label">Check-in date / Data arrivo<span class="required-star">*</span></label>
+          <input class="input datepicker" id="dataArrivo" name="dataArrivo" placeholder="Select date" required readonly />
+        </div>
+        <div class="field">
+          <label class="label">Check-out date / Data partenza<span class="required-star">*</span></label>
+          <input class="input datepicker" id="dataPartenza" name="dataPartenza" placeholder="Select date" required readonly />
+        </div>
+        <div class="field">
+          <label class="label">Nights / Notti</label>
+          <input class="input" type="number" id="numeroNotti" readonly style="background:#f0f0f0;font-weight:600;" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Main guest email / Email ospite principale<span class="required-star">*</span></label>
+        <input class="input" type="email" id="emailOspite" required />
+      </div>
+
+      <div class="section-title">Guests (max 5) / Ospiti (max 5)</div>
+
+      <div id="guestsContainer"></div>
+
+      <button type="button" id="addGuestBtn" class="btn btn-add">+ Add guest / Aggiungi ospite</button>
+
+      <!-- GDPR SECTION -->
+      <div class="section-title">Privacy & Data processing / Trattamento dei dati</div>
+      <div class="gdpr-card">
+        <div class="gdpr-header">
+          <div class="gdpr-title">
+            GDPR – Privacy & Data Processing / Trattamento dei dati personali
+          </div>
+          <button type="button" id="gdprToggle" class="gdpr-toggle-btn">
+            Read more / Leggi di più
+          </button>
+        </div>
+
+        <div class="gdpr-tabs">
+          <button type="button" class="gdpr-tab active" data-lang="en">English</button>
+          <button type="button" class="gdpr-tab" data-lang="it">Italiano</button>
+        </div>
+
+        <div id="gdprContent" class="gdpr-content">
+          <div id="gdprTextEn" class="gdpr-text">
+            <p><strong>ENGLISH</strong></p>
+            <p>
+              By submitting this form, you authorize the processing of your personal data
+              in compliance with EU Regulation 2016/679 (GDPR).
+            </p>
+            <p>Your information is used exclusively for:</p>
+            <ul style="margin:4px 0 6px 18px;padding:0;">
+              <li>mandatory communication to the Italian Police (Alloggiati Web);</li>
+              <li>legal, administrative and fiscal obligations related to your stay;</li>
+              <li>safety regulations and identity verification purposes.</li>
+            </ul>
+            <p>
+              Your data will be stored securely, not shared with unauthorized third parties,
+              and kept only for the legally required period.
+              You may request access, correction, or deletion of your data at any time.
+            </p>
+          </div>
+
+          <div id="gdprTextIt" class="gdpr-text" style="display:none;">
+            <p><strong>ITALIANO</strong></p>
+            <p>
+              Inviando questo modulo, autorizzi il trattamento dei tuoi dati personali
+              ai sensi del Regolamento UE 2016/679 (GDPR).
+            </p>
+            <p>I dati raccolti sono utilizzati esclusivamente per:</p>
+            <ul style="margin:4px 0 6px 18px;padding:0;">
+              <li>comunicazione obbligatoria alla Polizia di Stato (Alloggiati Web);</li>
+              <li>adempimenti amministrativi e fiscali relativi al soggiorno;</li>
+              <li>finalità di sicurezza e verifica dell’identità.</li>
+            </ul>
+            <p>
+              I tuoi dati saranno conservati in modo sicuro, non condivisi con soggetti non autorizzati
+              e mantenuti solo per il periodo previsto dalla legge.
+              Puoi richiedere accesso, modifica o cancellazione dei dati in qualsiasi momento.
+            </p>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:14px;">
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.4;">
+            <input type="checkbox" id="gdpr" required style="margin-top:3px;">
+            <span>
+              I accept the privacy policy and data processing terms /
+              Accetto l’informativa privacy e il trattamento dei dati.
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-submit">Send & Generate TXT / Invia e genera TXT</button>
+      <div id="status" class="status"></div>
+
+    </form>
+  </div>
+</div>
+
+<script>
+/***********************
+  LOAD JSON LISTS
+************************/
+const ITALY_CODE = "000000001";    // codice ISTAT dell'Italia
+const MAX = 5;
+
+let stati = null, comuni = null, province = null;
+
+async function ensureData() {
+  if (!stati) {
+    try {
+      // Try local first, fallback to CDN
+      let res = await fetch("/stati_istat.json");
+      if (!res.ok) {
+        // Fallback: use a minimal list of countries for demo
+        stati = [
+          { "nome": "Italy / Italia", "codice": "000000001" },
+          { "nome": "France / Francia", "codice": "000000002" },
+          { "nome": "Germany / Germania", "codice": "000000003" },
+          { "nome": "Spain / Spagna", "codice": "000000004" },
+          { "nome": "United Kingdom / Regno Unito", "codice": "000000005" }
+        ];
+      } else {
+        stati = await res.json();
+      }
+    } catch (e) {
+      // If fetch fails, use minimal list
+      stati = [
+        { "nome": "Italy / Italia", "codice": "000000001" },
+        { "nome": "France / Francia", "codice": "000000002" },
+        { "nome": "Germany / Germania", "codice": "000000003" },
+        { "nome": "Spain / Spagna", "codice": "000000004" },
+        { "nome": "United Kingdom / Regno Unito", "codice": "000000005" }
+      ];
+    }
+  }
+
+  if (!comuni) {
+    try {
+      let res = await fetch("/comuni_istat.json");
+      if (!res.ok) {
+        comuni = [
+          { "nome": "Venice / Venezia", "codice": "027042" },
+          { "nome": "Padua / Padova", "codice": "028080" }
+        ];
+      } else {
+        comuni = await res.json();
+      }
+    } catch (e) {
+      comuni = [
+        { "nome": "Venice / Venezia", "codice": "027042" },
+        { "nome": "Padua / Padova", "codice": "028080" }
+      ];
+    }
+  }
+
+  if (!province) {
+    try {
+      let res = await fetch("/province.json");
+      if (!res.ok) {
+        province = [
+          { "nome": "VENICE (VE)", "codice": "VE" },
+          { "nome": "PADOVA (PD)", "codice": "PD" }
+        ];
+      } else {
+        province = (await res.json()).map(p => ({
+          nome: p.nome,
+          sigla: p.codice
+        }));
+      }
+    } catch (e) {
+      province = [
+        { "nome": "VENICE (VE)", "sigla": "VE" },
+        { "nome": "PADOVA (PD)", "sigla": "PD" }
+      ];
+    }
+  }
+}
+
+/* ===================== HELPERS ===================== */
+function setItalianDependents(comuneN, provinciaN, comuneR, show) {
+  try {
+    const fields = [comuneN, provinciaN, comuneR];
+    fields.forEach(el => {
+      if (!el) return;
+      const wrapper = el.closest('.field');
+      if (wrapper) wrapper.style.display = show ? '' : 'none';
+      el.required = !!show;
+      if (!show) {
+        delete el.dataset.istat;
+        el.value = '';
+      }
+    });
+  } catch (e) { /* ignore */ }
+}
+
+function setFieldError(el, msg) {
+  if (!el) return;
+  clearFieldError(el);
+  try {
+    const wrapper = el.closest('.field') || el.parentNode;
+    const err = document.createElement('div');
+    err.className = 'field-error';
+    err.textContent = msg || 'Campo obbligatorio';
+    err.setAttribute('role','alert');
+    if (wrapper) wrapper.appendChild(err);
+    el.classList.add('input-error');
+  } catch(e){}
+}
+
+function clearFieldError(el) {
+  if (!el) return;
+  try {
+    const wrapper = el.closest('.field') || el.parentNode;
+    if (wrapper) {
+      const err = wrapper.querySelector('.field-error');
+      if (err) err.remove();
+    }
+    el.classList.remove('input-error');
+  } catch(e){}
+}
+
+function checkRequiredSelections() {
+  // return true if all required-select inputs have a dataset.istat
+  const bad = document.querySelectorAll('[data-require-select]');
+  for (const el of bad) {
+    if (el.required || el.dataset.requiredAlways === 'true') {
+      if (!el.dataset || !el.dataset.istat) {
+        setFieldError(el, 'Please select a value from the list');
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+        return { ok: false, el };
+      } else {
+        clearFieldError(el);
+      }
+    }
+  }
+  return { ok: true };
+}
+
+/***********************
+  AUTOCOMPLETE POTENZIATO
+************************/
+function auto(input, list) {
+  // If input already wrapped (re-binding), reuse wrapper
+  let wrap;
+  if (input.parentNode && input.parentNode.classList && input.parentNode.classList.contains('ac-wrapper')) {
+    wrap = input.parentNode;
+  } else {
+    wrap = document.createElement("div");
+    wrap.className = "ac-wrapper";
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+  }
+
+  const dd = document.createElement("div");
+  dd.className = "ac-list";
+  wrap.appendChild(dd);
+
+  input.addEventListener("input", () => {
+    const valRaw = input.value.trim();
+    const val = valRaw.toLowerCase();
+
+    delete input.dataset.istat;  // reset quando si scrive
+
+    dd.innerHTML = "";
+    if (!val) {
+      dd.style.display = "none";
+      return;
+    }
+
+    // Prioritize startsWith matches, then includes
+    const starts = list.filter(x => x.nome.toLowerCase().startsWith(val));
+    const contains = list.filter(x => !x.nome.toLowerCase().startsWith(val) && x.nome.toLowerCase().includes(val));
+    const combined = starts.concat(contains).slice(0,40);
+
+    combined.forEach((x) => {
+      const item = document.createElement("div");
+      item.className = "ac-item";
+      item.textContent = x.nome;
+
+      item.onclick = () => {
+        input.value = x.nome;
+        input.dataset.istat = x.sigla || x.codice;
+        // clear any inline error now that a proper selection was made
+        try { clearFieldError(input); } catch(e){}
+        // Flag to prevent blur from re-applying error after selection
+        input.dataset.justSelected = 'true';
+
+        input.dispatchEvent(new Event("input"));   // aggiorna eventuali listeners
+        input.dispatchEvent(new Event("change"));  // ATTIVA L’AUTOFILL
+
+        dd.style.display = "none";
+      };
+      dd.appendChild(item);
+    });
+
+    dd.style.display = dd.innerHTML ? "block" : "none";
+  });
+
+  // hide dropdown on blur after short delay (allow click)
+  input.addEventListener('blur', () => setTimeout(()=>{
+    dd.style.display = 'none';
+    // If this input requires a selection from the list and no selection was made,
+    // mark the field invalid but preserve the typed text so the user can correct it.
+    // Skip if a selection was just made (to avoid re-applying error after click).
+    if (!input.dataset.justSelected && input.hasAttribute('data-require-select') && (!input.dataset || !input.dataset.istat)) {
+      try {
+        setFieldError(input, 'Please select a value from the suggestions');
+      } catch(e){}
+    }
+    // Clear the just-selected flag for next interaction
+    delete input.dataset.justSelected;
+  }, 150));
+  input.setAttribute('autocomplete','off');
+
+  document.addEventListener("click", (e) => {
+    if (!wrap.contains(e.target)) {
+      dd.style.display = "none";
+    }
+  });
+}
+
+/***********************
+  CALCOLO NOTTI
+************************/
+function calcNotti() {
+  const arrivo = document.getElementById("dataArrivo").value;
+  const partenza = document.getElementById("dataPartenza").value;
+  const nottiEl = document.getElementById("numeroNotti");
+
+  if (!arrivo || !partenza) {
+    nottiEl.value = "";
+    return;
+  }
+
+  const d1 = new Date(arrivo);
+  const d2 = new Date(partenza);
+  const diff = (d2 - d1) / (1000 * 60 * 60 * 24);
+
+  nottiEl.value = diff > 0 ? diff : "";
+}
+
+/***********************
+  DATEPICKER ARRIVO/PARTENZA
+************************/
+document.addEventListener("DOMContentLoaded", () => {
+
+  flatpickr("#dataArrivo", {
+    dateFormat: "Y-m-d",
+    altInput: true,
+    altFormat: "F j, Y",
+    locale: "en",
+    onChange: calcNotti
+  });
+
+  flatpickr("#dataPartenza", {
+    dateFormat: "Y-m-d",
+    altInput: true,
+    altFormat: "F j, Y",
+    locale: "en",
+    onChange: calcNotti
+  });
+
+});
+
+// Clear inline errors when user edits fields
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (el && el.classList && el.classList.contains('input')) {
+    clearFieldError(el);
+  }
+});
+document.addEventListener('change', (e) => {
+  const el = e.target;
+  if (el) clearFieldError(el);
+});
+/***********************
+  ADD GUEST BLOCK
+************************/
+function addGuest() {
+  const container = document.getElementById("guestsContainer");
+  const n = container.children.length;
+
+  if (n >= MAX) return;
+
+  const div = document.createElement("div");
+  div.className = "guest-block";
+
+  div.innerHTML = `
+    <div class="guest-header">
+      <p class="guest-title">Guest ${n+1} / Ospite ${n+1}</p>
+      <button type="button" class="btn-remove" data-remove>Remove</button>
+    </div>
+
+    <div class="grid-3">
+      <div class="field">
+        <label class="label">Guest type / Tipo ospite<span class="required-star">*</span></label>
+        <select name="tipo_${n}" class="input" required>
+          <option value="16">Single guest / Ospite singolo</option>
+          <option value="17">Family head / Capofamiglia</option>
+          <option value="19">Family member / Familiare</option>
+          <option value="18">Group head / Capogruppo</option>
+          <option value="20">Group member / Membro del gruppo</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="label">Surname / Cognome<span class="required-star">*</span></label>
+        <input class="input" name="cognome_${n}" required>
+      </div>
+
+      <div class="field">
+        <label class="label">Name / Nome<span class="required-star">*</span></label>
+        <input class="input" name="nome_${n}" required>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="field">
+        <label class="label">Sex / Sesso<span class="required-star">*</span></label>
+        <select name="sesso_${n}" class="input" required>
+          <option value="1">Male</option>
+          <option value="2">Female</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="label">Date of birth / Data di nascita<span class="required-star">*</span></label>
+        <input class="input birth-datepicker" name="nascita_${n}" placeholder="Select date…" required>
+      </div>
+
+      <div class="field">
+        <label class="label">Citizenship / Cittadinanza<span class="required-star">*</span></label>
+        <input class="input" name="citt_${n}" placeholder="Type country…" required>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="field">
+        <label class="label">Birth country / Stato di nascita<span class="required-star">*</span></label>
+        <input class="input" name="stato_${n}" placeholder="Type country…" required>
+      </div>
+
+      <div class="field">
+        <label class="label">Birth municipality / Comune nascita<span class="required-star">*</span></label>
+        <input class="input" name="comune_${n}" placeholder="Type city…">
+      </div>
+
+      <div class="field">
+        <label class="label">Birth province / Provincia nascita (IT only)<span class="required-star">*</span></label>
+        <input class="input" name="prov_${n}" placeholder="PADOVA (PD)">
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="field">
+        <label class="label">Document type / Tipo documento<span class="required-star">*</span></label>
+        <select class="input" name="doc_${n}" required>
+          <option value="">Select… / Seleziona…</option>
+          <option value="PASS">Passport / Passaporto</option>
+          <option value="ID">ID card / Carta d’identità</option>
+          <option value="DL">Driving licence / Patente</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="label">Document number / Numero documento<span class="required-star">*</span></label>
+        <input class="input" name="docnum_${n}" required>
+      </div>
+
+      <div class="field">
+        <label class="label">Issued at / Luogo rilascio<span class="required-star">*</span></label>
+        <input class="input" name="ril_${n}" placeholder="City or country…" required>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label class="label">Address / Indirizzo</label>
+        <input class="input" name="addr_${n}">
+      </div>
+
+      <div class="field">
+        <label class="label">Residence city / Comune residenza<span class="required-star">*</span></label>
+        <input class="input" name="res_${n}" placeholder="Type city…">
+      </div>
+    </div>
+  `;
+
+  container.appendChild(div);
+
+  /***********************
+    AUTOCOMPLETE BINDINGS
+  ************************/
+  ensureData().then(() => {
+
+    const citt = div.querySelector(`input[name="citt_${n}"]`);
+    const stato = div.querySelector(`input[name="stato_${n}"]`);
+    const ril = div.querySelector(`input[name="ril_${n}"]`);
+    const comuneN = div.querySelector(`input[name="comune_${n}"]`);
+    const provinciaN = div.querySelector(`input[name="prov_${n}"]`);
+    const comuneR = div.querySelector(`input[name="res_${n}"]`);
+
+    // mark these inputs as requiring a selection from the list (cannot type free text)
+    if (citt) citt.setAttribute('data-require-select','true');
+    if (stato) stato.setAttribute('data-require-select','true');
+    if (ril) ril.setAttribute('data-require-select','true');
+    if (comuneN) comuneN.setAttribute('data-require-select','true');
+    if (provinciaN) provinciaN.setAttribute('data-require-select','true');
+    if (comuneR) comuneR.setAttribute('data-require-select','true');
+
+    // *** Register sync listener BEFORE setting up autocompletes ***
+    const syncCittadinanzaOnChange = () => {
+      const code = citt.dataset.istat;
+      const name = citt.value;
+
+      if (code || name) {
+        // Stato nascita auto-uguale alla cittadinanza
+        if (stato) { 
+          stato.value = name; 
+          stato.dataset.istat = code;
+        }
+
+        // Luogo rilascio auto-uguale
+        if (ril) { ril.value = name; ril.dataset.istat = code; }
+
+        // toggle italian-dependent fields based on the selected country
+        const isIt = (code === ITALY_CODE) || (String(name || '').toLowerCase().includes('italia'));
+        setItalianDependents(comuneN, provinciaN, comuneR, isIt);
+      }
+    };
+
+    // Listen to change event
+    if (citt) {
+      citt.addEventListener("change", syncCittadinanzaOnChange);
+    }
+
+    auto(citt, stati);
+    auto(stato, stati);
+    auto(ril, [...stati, ...comuni]);
+    auto(comuneN, comuni);
+    auto(comuneR, comuni);
+
+    // initial visibility for Italian-dependent fields
+    setItalianDependents(comuneN, provinciaN, comuneR, false);
+
+    // *** Provincia nascita: mostra nome esteso (“PADOVA (PD)”) ma salva sigla “PD” ***
+    if (provinciaN) {
+      provinciaN.addEventListener("input", () => {
+        delete provinciaN.dataset.istat;
+      });
+      auto(provinciaN, province.map(p => ({
+        nome: p.nome,   // esempio: "PADOVA (PD)"
+        codice: p.sigla // salva: "PD"
+      })));
+    }
+
+    // when stato (birth country) changes, ensure dependents show/hide
+    if (stato) {
+      stato.addEventListener('change', () => {
+        const code = stato.dataset.istat;
+        const name = stato.value;
+        const isIt = (code === ITALY_CODE) || (String(name || '').toLowerCase().includes('italia'));
+        setItalianDependents(comuneN, provinciaN, comuneR, isIt);
+      });
+    }
+
+  });
+
+  /***********************
+    DATEPICKER PER NASCITA
+  ************************/
+  const birthEl = div.querySelector(".birth-datepicker");
+  if (birthEl) {
+    flatpickr(birthEl, {
+    dateFormat: "Y-m-d",
+    altInput: true,
+    altFormat: "F j, Y",
+    locale: "en",
+    maxDate: "today",
+    yearRange: [1920, 2030],
+    shorthandCurrentMonth: true
+    });
+  }
+}
+
+/***********************
+  REMOVE GUEST
+************************/
+document.getElementById("guestsContainer").onclick = (e) => {
+  const btn = e.target.closest('[data-remove]');
+  if (btn) {
+    const block = btn.closest('.guest-block');
+    if (block) block.remove();
+  }
+};
+
+document.getElementById("addGuestBtn").onclick = addGuest;
+addGuest();
+/***********************
+  EVIDENZIA CAMPO ERRORE
+************************/
+function markError(el) {
+  if (!el) return;
+  el.style.borderColor = "#d33";
+  el.style.boxShadow = "0 0 4px rgba(211,0,0,0.6)";
+  setTimeout(() => {
+    el.style.borderColor = "#ccc";
+    el.style.boxShadow = "none";
+  }, 2000);
+}
+
+/***********************
+  VALIDAZIONE ITALIANI
+************************/
+function validateItalianRequirements(i) {
+
+  const citt = document.querySelector(`input[name="citt_${i}"]`);
+
+  // If structure is missing, fail safely
+  if (!citt) return false;
+
+  // NUOVA LOGICA: non usiamo più il codice ISTAT → lo identifichiamo dal nome
+  const isItalian = (citt.value || "").toLowerCase().includes("italia");
+
+  const comuneNascita = document.querySelector(`input[name="comune_${i}"]`);
+  const provinciaNascita = document.querySelector(`input[name="prov_${i}"]`);
+  const comuneResidenza = document.querySelector(`input[name="res_${i}"]`);
+
+  if (isItalian) {
+
+    // Comune nascita (dataset.istat richiesto)
+    if (!comuneNascita || !comuneNascita.dataset || !comuneNascita.dataset.istat) {
+      setFieldError(comuneNascita || citt, `Guest ${i+1}: Comune di nascita obbligatorio per cittadini italiani.`);
+      return false;
+    }
+
+    // Provincia nascita (iniziale, es. "PD")
+    if (!provinciaNascita || !provinciaNascita.dataset || !provinciaNascita.dataset.istat || provinciaNascita.dataset.istat.trim().length !== 2) {
+      setFieldError(provinciaNascita || citt, `Guest ${i+1}: Provincia di nascita obbligatoria per cittadini italiani.`);
+      return false;
+    }
+
+    // Comune residenza
+    if (!comuneResidenza || !comuneResidenza.dataset || !comuneResidenza.dataset.istat) {
+      setFieldError(comuneResidenza || citt, `Guest ${i+1}: Comune di residenza obbligatorio per cittadini italiani.`);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/***********************
+  BUILD PAYLOAD PER BACKEND
+************************/
+function buildPayload() {
+  const container = document.getElementById("guestsContainer");
+  const blocks = container.querySelectorAll(".guest-block");
+
+  const guests = [];
+
+  blocks.forEach((b, i) => {
+      const get = (name) => b.querySelector(`[name="${name}_${i}"]`) || { value: "", dataset: {} };
+
+      guests.push({
+        tipoAlloggiato: (get("tipo").value || "").toString(),
+        cognome: (get("cognome").value || "").toString().trim(),
+        nome: (get("nome").value || "").toString().trim(),
+        sesso: (get("sesso").value || "").toString(),
+        dataNascita: (get("nascita").value || "").toString(),
+
+        cittadinanza: (get("citt").dataset && get("citt").dataset.istat) || "",
+        statoNascita: (get("stato").dataset && get("stato").dataset.istat) || "",
+        comuneNascita: (get("comune").dataset && get("comune").dataset.istat) || "",
+        provinciaNascita: (get("prov").dataset && get("prov").dataset.istat) || "",
+
+        tipoDocumento: (get("doc").value || "").toString(),
+        numeroDocumento: (get("docnum").value || "").toString().trim(),
+        luogoRilascio: (get("ril").dataset && get("ril").dataset.istat) || "",
+
+        indirizzo: (get("addr").value || "").toString().trim(),
+        comuneResidenza: (get("res").dataset && get("res").dataset.istat) || ""
+      });
+  });
+
+  return {
+    appartamento: document.querySelector("[name='appartamento']").value,
+    dataArrivo: document.getElementById("dataArrivo").value,
+    dataPartenza: document.getElementById("dataPartenza").value,
+    numeroNotti: document.getElementById("numeroNotti").value,
+    emailOspite: document.getElementById("emailOspite").value.trim(),
+    guests
+  };
+}
+
+/***********************
+  GDPR TOGGLE + TABS
+************************/
+document.addEventListener("DOMContentLoaded", () => {
+  const gdprToggle = document.getElementById("gdprToggle");
+  const gdprContent = document.getElementById("gdprContent");
+  const tabs = document.querySelectorAll(".gdpr-tab");
+  const textEn = document.getElementById("gdprTextEn");
+  const textIt = document.getElementById("gdprTextIt");
+
+  if (gdprToggle && gdprContent) {
+    gdprToggle.addEventListener("click", () => {
+      gdprContent.classList.toggle("open");
+    });
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      tabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      const lang = tab.dataset.lang;
+      if (lang === "en") {
+        textEn.style.display = "block";
+        textIt.style.display = "none";
+      } else {
+        textEn.style.display = "none";
+        textIt.style.display = "block";
+      }
+    });
+  });
+});
+
+/***********************
+  SUBMIT FORM
+************************/
+document.getElementById("precheckinForm").onsubmit = (e) => {
+  e.preventDefault();
+
+  const statusEl = document.getElementById("status");
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  // GDPR obbligatorio
+  if (!document.getElementById("gdpr").checked) {
+    statusEl.textContent = "Please accept privacy terms / Accetta i termini privacy.";
+    statusEl.classList.add("error");
+    return;
+  }
+
+  // Ensure selection-based fields were chosen from lists (no manual free text)
+  const selCheck = checkRequiredSelections();
+  if (!selCheck.ok) {
+    statusEl.textContent = "Please select valid values from the suggestions (no manual input).";
+    statusEl.classList.add('error');
+    return;
+  }
+
+  // Validazione italiani
+  const blocks = document.querySelectorAll("#guestsContainer .guest-block");
+  for (let i = 0; i < blocks.length; i++) {
+    if (!validateItalianRequirements(i)) {
+      statusEl.textContent = "Missing required fields for Italian citizens.";
+      statusEl.classList.add("error");
+      return;
+    }
+  }
+
+  // Creazione payload
+  const payload = buildPayload();
+
+  statusEl.textContent = "Sending data… please wait / Invio in corso…";
+  statusEl.classList.remove("error", "ok");
+
+  fetch("/.netlify/functions/send-alloggiati-txt", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === "ok") {
+      statusEl.textContent = "Email sent successfully! / Email inviata con successo!";
+      statusEl.classList.add("ok");
+    } else {
+      statusEl.textContent = "Error sending email / Errore invio email";
+      statusEl.classList.add("error");
+    }
+  })
+  .catch(err => {
+    statusEl.textContent = "Connection error / Errore di connessione";
+    statusEl.classList.add("error");
+  });
+};
+
+</script>
+</body>
+</html>
