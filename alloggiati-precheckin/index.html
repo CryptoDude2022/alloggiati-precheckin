@@ -538,7 +538,8 @@ function checkRequiredSelections() {
   // return true if all required-select inputs have a dataset.istat
   const bad = document.querySelectorAll('[data-require-select]');
   for (const el of bad) {
-    if (el.required || el.dataset.requiredAlways === 'true') {
+    // Only check if field is required AND has a value typed in
+    if ((el.required || el.dataset.requiredAlways === 'true') && el.value.trim()) {
       if (!el.dataset || !el.dataset.istat) {
         setFieldError(el, 'Please select a value from the list');
         el.scrollIntoView({behavior:'smooth', block:'center'});
