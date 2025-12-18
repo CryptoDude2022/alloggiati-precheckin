@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<movimenti>
+  <codice>z04263</codice>
+  <prodotto>lovelyveniceapartments precheckin</prodotto>
+  <movimento>
+    <data>20/12/2025</data>
+    <struttura>
+      <apertura>si</apertura>
+      <camereoccupate>1</camereoccupate>
+      <cameredisponibili>1</cameredisponibili>
+      <lettidisponibili>2</lettidisponibili>
+    </struttura>
+    <arrivi>
+      <arrivo>
+        <idswh>1234567</idswh>
+        <tipoalloggiato>18</tipoalloggiato>
+        <idcapo></idcapo>
+        <cognome>rossi</cognome>
+        <nome>mario</nome>
+        <sesso>1</sesso>
+        <cittadinanza>100000100</cittadinanza>
+        <statoresidenza>100000100</statoresidenza>
+        <luogoresidenza>412058091</luogoresidenza>
+        <datanascita>01/01/1980</datanascita>
+        <statonascita>100000100</statonascita>
+        <comunenascita>412058091</comunenascita>
+        <tipoturismo>non dichiarato</tipoturismo>
+        <mezzotrasporto>non dichiarato</mezzotrasporto>
+        <canaleprenotazione>non dichiarato</canaleprenotazione>
+        <titolostudio>non dichiarato</titolostudio>
+        <professione>non dichiarato</professione>
+        <esenzioneimposta></esenzioneimposta>
+      </arrivo>
+      <arrivo>
+        <idswh>1234568</idswh>
+        <tipoalloggiato>19</tipoalloggiato>
+        <idcapo>1234567</idcapo>
+        <cognome>bianchi</cognome>
+        <nome>luisa</nome>
+        <sesso>2</sesso>
+        <cittadinanza>100000100</cittadinanza>
+        <statoresidenza>100000100</statoresidenza>
+        <luogoresidenza>412058091</luogoresidenza>
+        <datanascita>02/02/1985</datanascita>
+        <statonascita>100000100</statonascita>
+        <comunenascita>412058091</comunenascita>
+        <tipoturismo>non dichiarato</tipoturismo>
+        <mezzotrasporto>non dichiarato</mezzotrasporto>
+        <canaleprenotazione>non dichiarato</canaleprenotazione>
+        <titolostudio>non dichiarato</titolostudio>
+        <professione>non dichiarato</professione>
+        <esenzioneimposta></esenzioneimposta>
+      </arrivo>
+    </arrivi>
+    <partenze>
+      <partenza>
+        <idswh>1234567</idswh>
+        <tipoalloggiato>18</tipoalloggiato>
+        <arrivo>20/12/2025</arrivo>
+      </partenza>
+      <partenza>
+        <idswh>1234568</idswh>
+        <tipoalloggiato>19</tipoalloggiato>
+        <arrivo>20/12/2025</arrivo>
+      </partenza>
+    </partenze>
+    <prenotazioni>
+      <prenotazione>
+        <idswh>p1234567</idswh>
+        <arrivo>20/12/2025</arrivo>
+        <partenza>22/12/2025</partenza>
+        <ospiti>2</ospiti>
+        <camere>1</camere>
+        <prezzo>0.00</prezzo>
+        <canaleprenotazione>non dichiarato</canaleprenotazione>
+        <statoprovenienza>100000100</statoprovenienza>
+        <comuneprovenienza>roma</comuneprovenienza>
+      </prenotazione>
+    </prenotazioni>
+  </movimento>
+</movimenti>

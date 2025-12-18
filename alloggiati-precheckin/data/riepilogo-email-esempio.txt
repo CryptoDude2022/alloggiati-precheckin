@@ -1,0 +1,40 @@
+════════════════════════════════════════════════════════════════
+                    PRE CHECK-IN ALLOGGIATI WEB
+════════════════════════════════════════════════════════════════
+
+APPARTAMENTO:     Station Apartment
+DATA ARRIVO:      20/12/2025
+DATA PARTENZA:    22/12/2025
+NUMERO NOTTI:     2
+EMAIL OSPITE:     mario.rossi@email.it
+
+────────────────────────────────────────────────────────────────
+                         ELENCO OSPITI
+────────────────────────────────────────────────────────────────
+
+┌─ OSPITE 1 ─────────────────────────────────────────────
+│
+│  Tipo:              Ospite singolo
+│  Cognome:           ROSSI
+│  Nome:              MARIO
+│  Sesso:             Maschio
+│  Data di nascita:   01/01/1980
+│  Luogo di nascita:  Roma
+│  Cittadinanza:      ITALIA
+│  Documento:         Passaporto
+│  Numero:            AA1234567
+│  Luogo rilascio:    Roma
+│
+└──────────────────────────────────────────────────────────────
+
+┌─ OSPITE 2 ─────────────────────────────────────────────
+│
+│  Tipo:              Familiare
+│  Cognome:           BIANCHI
+│  Nome:              LUISA
+│  Sesso:             Femmina
+│  Data di nascita:   02/02/1985
+│  Luogo di nascita:  Roma
+│  Cittadinanza:      ITALIA
+│
+└──────────────────────────────────────────────────────────────
