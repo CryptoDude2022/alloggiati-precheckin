@@ -1,6 +1,9 @@
 ﻿// Vercel Serverless Function: Send Alloggiati TXT via Resend
 // Path: /api/send-alloggiati-txt.js
 
+import fs from 'fs';
+import path from 'path';
+
 /**********************************************
  * RATE LIMITING - In-memory store
  **********************************************/
@@ -158,7 +161,7 @@ export default async function handler(req, res) {
       // Per familiari e membri gruppo (i > 0), i campi documento sono vuoti
       const isFirstGuest = (i === 0);
       const tipoDoc = isFirstGuest ? mapTipoDoc(clean(g.tipoDocumento)) : "";
-      const numDoc = isFirstGuest ? clean(g.numeroDocumento) : "";
+      const numDoc = isFirstGuest ? clean(g.numeroDocumento).toUpperCase() : "";
       const luogoRil = isFirstGuest ? clean(g.luogoRilascio) : "";
       
       // Costruisce la riga secondo formato Alloggiati Web (168 caratteri totali)
@@ -175,8 +178,10 @@ export default async function handler(req, res) {
       // Provincia nascita: solo per italiani, altrimenti vuoto
       const provinciaNascitaTxt = isItalian ? pad(clean(g.provinciaNascita).toUpperCase(), 2) : pad("", 2);
       
-      // Stato nascita: usa il valore dal form, fallback a cittadinanza
-      const statoNascitaTxt = pad(clean(g.statoNascita) || cittadinanzaCode, 9);
+      // Stato nascita: per stranieri = cittadinanza, per italiani = dal form
+      const statoNascitaTxt = isItalian 
+        ? pad(clean(g.statoNascita) || "", 9)
+        : pad(cittadinanzaCode, 9);
       
       // Luogo rilascio: per stranieri = cittadinanza se vuoto, altrimenti dal form
       let luogoRilTxt = luogoRil;
@@ -189,8 +194,8 @@ export default async function handler(req, res) {
         pad(tipoAlloggiato, 2) +                                              // Tipo Alloggiato (2)
         formatDate(dataArrivo) +                                              // Data Arrivo gg/mm/aaaa (10)
         padNum(clean(g.giorni) || numeroNotti || 1, 2) +                      // Permanenza giorni (2)
-        pad(clean(g.cognome), 50) +                                            // Cognome (50)
-        pad(clean(g.nome), 30) +                                               // Nome (30)
+        pad(clean(g.cognome).toUpperCase(), 50) +                             // Cognome (50)
+        pad(clean(g.nome).toUpperCase(), 30) +                                // Nome (30)
         pad(sesso, 1) +                                                       // Sesso 1/2 (1)
         formatDate(clean(g.dataNascita)) +                                    // Data Nascita gg/mm/aaaa (10)
         comuneNascitaTxt +                                                     // Comune Nascita cod. ISTAT (9) - vuoto per stranieri
@@ -251,8 +256,18 @@ export default async function handler(req, res) {
       return codes[apt] || "Z07886";
     };
 
-    // Tipo alloggiato: codici standard Polizia di Stato (stessi del TXT)
-    // 16 = Ospite singolo, 17 = Capofamiglia, 18 = Capogruppo, 19 = Familiare, 20 = Membro Gruppo
+    // Mappatura tipo alloggiato GIES
+    // 16 = Capo Famiglia, 17 = Capo Gruppo, 18 = Ospite Singolo, 19 = Familiare, 20 = Membro Gruppo
+    const mapTipoGIES = (tipo) => {
+      const mapping = {
+        "16": "18",  // Ospite singolo nel form -> 18 in GIES
+        "17": "16",  // Capofamiglia nel form -> 16 in GIES
+        "18": "17",  // Capogruppo nel form -> 17 in GIES
+        "19": "19",  // Familiare
+        "20": "20"   // Membro gruppo
+      };
+      return mapping[tipo] || "18";
+    };
 
     // Sesso: M = Maschio, F = Femmina (formato XML Ross1000)
     const mapSessoGIES = (s) => {
@@ -270,6 +285,7 @@ export default async function handler(req, res) {
     
     // Determina il tipo del primo ospite
     const firstGuestType = guests[0]?.tipoAlloggiato || "16";
+    const tipoGIESFirst = mapTipoGIES(firstGuestType);
 
     let giesLines = [];
     
@@ -299,40 +315,61 @@ export default async function handler(req, res) {
         // Se il primo ospite è marcato come "Ospite Singolo" ma ci sono altri ospiti, cambialo in Capofamiglia
         tipoAlloggiato = "17";
       }
-
+      const tipoGIES = mapTipoGIES(tipoAlloggiato);
+      
       // ID Capogruppo: vuoto per primo ospite, ID del primo per gli altri
       const idCapo = isFirstGuest ? "" : firstGuestId;
-
+      
       const sesso = mapSessoGIES(clean(g.sesso));
+      // Usa il codice fornito dal form, se presente; altrimenti prova a mappare dal nome
       const cittadinanza = clean(g.cittadinanza) || "";
 
-      // Stato di nascita: usa il valore dal form, fallback a cittadinanza
-      const statoNascita = clean(g.statoNascita) || cittadinanza || "";
+      // Stato di nascita: nel XML deve essere uguale alla cittadinanza
+      let statoNascita = cittadinanza || "";
+      // Se non c'è cittadinanza, prova a usare il valore dal form come fallback
+      if (!statoNascita) {
+        statoNascita = clean(g.statoNascita) || "";
+        if (!statoNascita) {
+          try {
+            const statiPath = path.join(process.cwd(), 'data', 'stati_istat.json');
+            const statiIstat = JSON.parse(fs.readFileSync(statiPath, 'utf8'));
+            const statoInput = (clean(g.statoNascitaNome || g.statoNascita || "") || "").toLowerCase().trim();
+            if (statoInput) {
+              const statoObj = statiIstat.find(s => s.nome.toLowerCase().includes(statoInput));
+              statoNascita = statoObj ? statoObj.codice : "";
+            }
+          } catch (e) {
+            statoNascita = "";
+          }
+        }
+      }
       const comuneNascita = clean(g.comuneNascita) || "";
       const dataNascita = formatDateGIES(clean(g.dataNascita));
-
+      
       // Residenza: per cittadini stranieri, se comuneResidenza è vuoto, usa il codice della cittadinanza
       const statoResidenza = cittadinanza;
       let comuneResidenza = clean(g.comuneResidenza) || "";
+      // Se comuneResidenza è vuoto e non è italiano, usa il codice della cittadinanza come luogo di residenza
       const ITALY_CODE = "100000100";
       if (!comuneResidenza && cittadinanza && cittadinanza !== ITALY_CODE) {
         comuneResidenza = cittadinanza;
       }
-
+      
       // ARR|IDSWH|TIPO|IDCAPO|SESSO|CITT|STATO_RES|COMUNE_RES|DATA_NASC|STATO_NASC|COMUNE_NASC|TIPO_TUR|MEZZO|CANALE|TITOLO|PROF|ESEN
-      giesLines.push(`ARR|${guestId}|${tipoAlloggiato}|${idCapo}|${sesso}|${cittadinanza}|${statoResidenza}|${comuneResidenza}|${dataNascita}|${statoNascita}|${comuneNascita}||||`);
+      giesLines.push(`ARR|${guestId}|${tipoGIES}|${idCapo}|${sesso}|${cittadinanza}|${statoResidenza}|${comuneResidenza}|${dataNascita}|${statoNascita}|${comuneNascita}|Non specificato|Non specificato|Non specificato|||`);
     }
-
+    
     // PAR - Partenze (uno per ogni ospite)
     for (let i = 0; i < guests.length; i++) {
       const g = guests[i];
       const clean = (val) => (val === undefined || val === null || val === "undefined") ? "" : String(val);
-
+      
       const guestId = parseInt(baseId) + i;
       const tipoAlloggiato = determineTipoAlloggiato(g, i, guests.length);
-
+      const tipoGIES = mapTipoGIES(tipoAlloggiato);
+      
       // PAR|IDSWH|TIPO|DATA_ARRIVO
-      giesLines.push(`PAR|${guestId}|${tipoAlloggiato}|${dataArrivoGIES}`);
+      giesLines.push(`PAR|${guestId}|${tipoGIES}|${dataArrivoGIES}`);
     }
     
     // PRE - Prenotazione
@@ -362,25 +399,42 @@ export default async function handler(req, res) {
 
     let xmlArrivi = "";
     let xmlPartenze = "";
-
+    
     for (let i = 0; i < guests.length; i++) {
       const g = guests[i];
       const clean = (val) => (val === undefined || val === null || val === "undefined") ? "" : String(val);
-
+      
       const guestId = parseInt(baseId) + i;
       const isFirstGuest = (i === 0);
       const tipoAlloggiato = determineTipoAlloggiato(g, i, guests.length);
+      const tipoGIES = mapTipoGIES(tipoAlloggiato);
       const idCapo = isFirstGuest ? "" : firstGuestId;
-
+      
       const sesso = mapSessoGIES(clean(g.sesso));
       const cittadinanza = clean(g.cittadinanza) || "";
-      // Stato di nascita: usa il valore dal form, fallback a cittadinanza
-      const statoNascita = clean(g.statoNascita) || cittadinanza || "";
+      // Stato di nascita: nel XML deve essere uguale alla cittadinanza
+      let statoNascita = cittadinanza || "";
+      // Se non c'è cittadinanza, prova a usare il valore dal form come fallback
+      if (!statoNascita) {
+        statoNascita = clean(g.statoNascita) || "";
+        if (!statoNascita) {
+          try {
+            const statiPath = path.join(process.cwd(), 'data', 'stati_istat.json');
+            const statiIstat = JSON.parse(fs.readFileSync(statiPath, 'utf8'));
+            const statoInput = clean(g.statoNascitaNome || g.statoNascita || "").toLowerCase().trim();
+            const statoObj = statiIstat.find(s => s.nome.toLowerCase().includes(statoInput));
+            statoNascita = statoObj ? statoObj.codice : "";
+          } catch (e) {
+            statoNascita = "";
+          }
+        }
+      }
       const comuneNascita = clean(g.comuneNascita) || "";
       const dataNascita = formatDateGIES(clean(g.dataNascita));
-      // Residenza
+      // Residenza: per cittadini stranieri, se comuneResidenza è vuoto, usa il codice della cittadinanza
       const statoResidenza = cittadinanza;
       let comuneResidenza = clean(g.comuneResidenza) || "";
+      // Se comuneResidenza è vuoto e non è italiano, usa il codice della cittadinanza come luogo di residenza
       const ITALY_CODE = "100000100";
       if (!comuneResidenza && cittadinanza && cittadinanza !== ITALY_CODE) {
         comuneResidenza = cittadinanza;
@@ -389,7 +443,7 @@ export default async function handler(req, res) {
       xmlArrivi += `
       <arrivo>
         <idswh>${guestId}</idswh>
-        <tipoalloggiato>${tipoAlloggiato}</tipoalloggiato>
+        <tipoalloggiato>${tipoGIES}</tipoalloggiato>
         <idcapo>${idCapo}</idcapo>
         <cognome>${escapeXml(clean(g.cognome))}</cognome>
         <nome>${escapeXml(clean(g.nome))}</nome>
@@ -400,18 +454,18 @@ export default async function handler(req, res) {
         <datanascita>${dataNascita}</datanascita>
         <statonascita>${statoNascita}</statonascita>
         <comunenascita>${comuneNascita}</comunenascita>
-        <tipoturismo></tipoturismo>
-        <mezzotrasporto></mezzotrasporto>
-        <canaleprenotazione></canaleprenotazione>
-        <titolostudio></titolostudio>
-        <professione></professione>
+        <tipoturismo>Non specificato</tipoturismo>
+        <mezzotrasporto>Non specificato</mezzotrasporto>
+        <canaleprenotazione>Non specificato</canaleprenotazione>
+        <titolostudio>Non specificato</titolostudio>
+        <professione>Non specificato</professione>
         <esenzioneimposta></esenzioneimposta>
       </arrivo>`;
 
       xmlPartenze += `
       <partenza>
         <idswh>${guestId}</idswh>
-        <tipoalloggiato>${tipoAlloggiato}</tipoalloggiato>
+        <tipoalloggiato>${tipoGIES}</tipoalloggiato>
         <arrivo>${dataArrivoGIES}</arrivo>
       </partenza>`;
     }
@@ -430,6 +484,8 @@ export default async function handler(req, res) {
     </struttura>
     <arrivi>${xmlArrivi}
     </arrivi>
+    <partenze>${xmlPartenze}
+    </partenze>
     <prenotazioni>
       <prenotazione>
         <idswh>P${baseId}</idswh>
@@ -438,22 +494,11 @@ export default async function handler(req, res) {
         <ospiti>${guests.length}</ospiti>
         <camere>1</camere>
         <prezzo>0.00</prezzo>
-        <canaleprenotazione></canaleprenotazione>
+        <canaleprenotazione>Non specificato</canaleprenotazione>
         <statoprovenienza>${statoProvFirst}</statoprovenienza>
         <comuneprovenienza>${comuneProvFirst}</comuneprovenienza>
       </prenotazione>
     </prenotazioni>
-  </movimento>
-  <movimento>
-    <data>${dataPartenzaGIES}</data>
-    <struttura>
-      <apertura>SI</apertura>
-      <camereoccupate>0</camereoccupate>
-      <cameredisponibili>1</cameredisponibili>
-      <lettidisponibili>${guests.length}</lettidisponibili>
-    </struttura>
-    <partenze>${xmlPartenze}
-    </partenze>
   </movimento>
 </movimenti>`;
 

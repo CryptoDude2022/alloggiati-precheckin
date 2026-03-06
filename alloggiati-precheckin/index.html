@@ -1778,7 +1778,7 @@ ${tipoOspiteOptions}
       <label class="label">Residence city / Comune residenza (IT only)<span class="required-star">*</span></label>
       <input class="input" name="res_${n}" type="text" placeholder="Type city..." inputmode="text">
     </div>
-    <div class="billing-fields" style="display:none">
+    ${isFirstGuest ? `<div class="billing-fields" style="display:none">
       <p class="section-subtitle">Billing info / Dati di fatturazione</p>
       <div class="grid-2">
         <div class="field">
@@ -1804,7 +1804,7 @@ ${tipoOspiteOptions}
           <input class="input" name="citta_fattura_${n}" type="text" placeholder="Venezia" inputmode="text">
         </div>
       </div>
-    </div>
+    </div>` : ''}
   `;
 
   container.appendChild(div);
@@ -2146,6 +2146,14 @@ setTimeout(() => {
       // Se si seleziona Capofamiglia (17) o Capogruppo (18) e c'è solo 1 ospite
       if ((val === "17" || val === "18") && currentGuests === 1) {
         addGuest(); // Aggiungi automaticamente il secondo ospite
+      }
+      // Se si torna a Ospite singolo (16), rimuovi tutti gli ospiti extra
+      if (val === "16" && currentGuests > 1) {
+        const children = Array.from(container.children);
+        for (let i = children.length - 1; i >= 1; i--) {
+          children[i].remove();
+        }
+        updateGuestTitles();
       }
     });
   }
