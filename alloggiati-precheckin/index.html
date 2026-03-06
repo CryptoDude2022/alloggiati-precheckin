@@ -747,6 +747,21 @@
       font-size: 14px;
       color: #999;
     }
+
+    /* Sezione fatturazione */
+    .billing-fields {
+      margin-top: 16px;
+      padding: 16px;
+      border: 1px dashed #c0a060;
+      border-radius: 10px;
+      background: #fdf8ef;
+    }
+    .billing-fields .section-subtitle {
+      font-weight: 700;
+      font-size: 15px;
+      color: #8a6d3b;
+      margin: 0 0 12px 0;
+    }
   </style>
 </head>
 <body>
@@ -1261,6 +1276,20 @@ function setItalianDependents(comuneN, provinciaN, comuneR, show) {
   } catch (e) { /* ignore */ }
 }
 
+// Mostra/nasconde i campi fatturazione: visibili solo per italiani con tipo 16/17/18
+function setBillingFieldsVisibility(guestBlock, isItalian, tipoAlloggiato) {
+  const wrapper = guestBlock.querySelector('.billing-fields');
+  if (!wrapper) return;
+  const isBillingType = (tipoAlloggiato === '16' || tipoAlloggiato === '17' || tipoAlloggiato === '18');
+  const show = isItalian && isBillingType;
+  wrapper.style.display = show ? '' : 'none';
+  // Imposta/rimuovi required sui campi fatturazione
+  wrapper.querySelectorAll('input').forEach(el => {
+    el.required = show;
+    if (!show) el.value = '';
+  });
+}
+
 function setFieldError(el, msg) {
   if (!el) return;
   clearFieldError(el);
@@ -1321,18 +1350,21 @@ function clearFieldError(el) {
 }
 
 function checkRequiredSelects() {
-  // return true if all required-selects inputs have a dataset.istat
-  const bad = document.querySelectorAll('[data-require-select]');
-  for (const el of bad) {
-    // Only check if field is required AND has a value typed in
-    if ((el.required || el.dataset.requiredAlways === 'true') && el.value.trim()) {
-      if (!el.dataset || !el.dataset.istat) {
-        setFieldError(el, 'Please select value from the suggestions');
-        // Lo scroll è già gestito in setFieldError, rimuoviamo il duplicato
-        return { ok: false, el };
-      } else {
-        clearFieldError(el);
-      }
+  // Ogni campo con data-require-select che ha testo digitato DEVE avere dataset.istat
+  // (il valore deve provenire dalla lista JSON, non da testo libero)
+  const all = document.querySelectorAll('[data-require-select]');
+  for (const el of all) {
+    const hasValue = el.value.trim();
+    if (!hasValue) {
+      // Campo vuoto: se è required, lasciamo che la validazione HTML nativa lo gestisca
+      continue;
+    }
+    // Ha testo ma nessun codice ISTAT → l'utente ha digitato senza selezionare dalla lista
+    if (!el.dataset || !el.dataset.istat) {
+      setFieldError(el, 'Select from the list / Seleziona dalla lista');
+      return { ok: false, el };
+    } else {
+      clearFieldError(el);
     }
   }
   return { ok: true };
@@ -1350,8 +1382,14 @@ function validateGuestFieldsISTAT() {
     const citt = b.querySelector(`[name="citt_${idx}"]`);
     const stato = b.querySelector(`[name="stato_${idx}"]`);
 
-    if (citt && citt.value && !(citt.dataset && citt.dataset.istat)) return false;
-    if (stato && stato.value && !(stato.dataset && stato.dataset.istat)) return false;
+    if (citt && citt.value && !(citt.dataset && citt.dataset.istat)) {
+      setFieldError(citt, 'Select from the list / Seleziona dalla lista');
+      return false;
+    }
+    if (stato && stato.value && !(stato.dataset && stato.dataset.istat)) {
+      setFieldError(stato, 'Select from the list / Seleziona dalla lista');
+      return false;
+    }
   }
   return true;
 }
@@ -1441,33 +1479,36 @@ function auto(input, list) {
   // hide dropdown on blur after short delay (allow click)
   input.addEventListener('blur', () => setTimeout(()=>{
     dd.style.display = 'none';
-    
-    // Auto-match: se il testo digitato corrisponde esattamente a un valore nella lista, selezionalo automaticamente
+
+    // Se è appena stata fatta una selezione dal dropdown, non fare nulla
+    if (input.dataset.justSelected === 'true') {
+      delete input.dataset.justSelected;
+      return;
+    }
+
+    // Auto-match: se il testo digitato corrisponde esattamente a un valore nella lista, selezionalo
     if (!input.dataset.istat && input.value.trim()) {
-      const typed = input.value.trim().toLowerCase();
-      // Normalizza per confronto (rimuove accenti, apostrofi, spazi multipli)
       const normalize = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[''`]/g, "'").replace(/\s+/g, ' ').trim();
-      const typedNorm = normalize(typed);
+      const typedNorm = normalize(input.value.trim());
       const exactMatch = list.find(x => normalize(x.nome) === typedNorm);
       if (exactMatch) {
         input.value = exactMatch.nome;
         input.dataset.istat = exactMatch.sigla || exactMatch.codice;
-        input.dataset.justSelected = 'true';
         try { clearFieldError(input); } catch(e){}
+        return;
       }
     }
-    
-    // If this input requires a selection from the list and no selection was made,
-    // mark the field invalid but preserve the typed text so the user can correct it.
-    // Skip if a selection was just made (to avoid re-applying error after click).
-    if (!input.dataset.justSelected && input.hasAttribute('data-require-select') && (!input.dataset || !input.dataset.istat)) {
+
+    // Nessuna selezione valida dalla lista: il campo DEVE avere un valore dal JSON.
+    // Cancella il testo digitato e mostra errore.
+    if (input.hasAttribute('data-require-select') && input.value.trim() && !input.dataset.istat) {
+      input.value = '';
+      delete input.dataset.istat;
       try {
-        setFieldError(input, 'Please select value from the suggestions');
+        setFieldError(input, 'Select from the list / Seleziona dalla lista');
       } catch(e){}
     }
-    // Clear the justSelected flag for next interaction
-    delete input.dataset.justSelected;
-  }, 150));
+  }, 200));
   input.setAttribute('autocomplete','off');
 
   document.addEventListener("click", (e) => {
@@ -1502,15 +1543,37 @@ function calcNotti() {
 ************************/
 document.addEventListener("DOMContentLoaded", () => {
 
-  flatpickr("#dataArrivo", {
+  let partenzaPicker = null;
+
+  const arrivoInstance = flatpickr("#dataArrivo", {
     dateFormat: "Y-m-d",
     altInput: true,
     altFormat: "F j, Y",
     locale: "en",
-    onChange: calcNotti
+    onChange: function(selectedDates) {
+      calcNotti();
+      if (selectedDates.length > 0) {
+        const arrivo = selectedDates[0];
+        // minDate = giorno successivo all'arrivo
+        const minDate = new Date(arrivo);
+        minDate.setDate(minDate.getDate() + 1);
+        // maxDate = ultimo giorno del mese di arrivo
+        const maxDate = new Date(arrivo.getFullYear(), arrivo.getMonth() + 1, 0);
+
+        if (partenzaPicker) {
+          partenzaPicker.set('minDate', minDate);
+          partenzaPicker.set('maxDate', maxDate);
+          // Se la partenza attuale è fuori range, cancellala
+          const currentPartenza = partenzaPicker.selectedDates[0];
+          if (currentPartenza && (currentPartenza < minDate || currentPartenza > maxDate)) {
+            partenzaPicker.clear();
+          }
+        }
+      }
+    }
   });
 
-  flatpickr("#dataPartenza", {
+  partenzaPicker = flatpickr("#dataPartenza", {
     dateFormat: "Y-m-d",
     altInput: true,
     altFormat: "F j, Y",
@@ -1715,6 +1778,33 @@ ${tipoOspiteOptions}
       <label class="label">Residence city / Comune residenza (IT only)<span class="required-star">*</span></label>
       <input class="input" name="res_${n}" type="text" placeholder="Type city..." inputmode="text">
     </div>
+    <div class="billing-fields" style="display:none">
+      <p class="section-subtitle">Billing info / Dati di fatturazione</p>
+      <div class="grid-2">
+        <div class="field">
+          <label class="label">Tax code or VAT / Codice fiscale o P.IVA</label>
+          <input class="input" name="cf_${n}" type="text" placeholder="RSSMRA85M01H501Z" inputmode="text">
+        </div>
+        <div class="field">
+          <label class="label">Billing address / Indirizzo di fatturazione</label>
+          <input class="input" name="indirizzo_${n}" type="text" placeholder="Via Roma" inputmode="text">
+        </div>
+      </div>
+      <div class="grid-3">
+        <div class="field">
+          <label class="label">Street number / Civico</label>
+          <input class="input" name="civico_${n}" type="text" placeholder="12" inputmode="text">
+        </div>
+        <div class="field">
+          <label class="label">Postal code / CAP</label>
+          <input class="input" name="cap_${n}" type="text" placeholder="30100" inputmode="numeric" pattern="[0-9]{5}" maxlength="5">
+        </div>
+        <div class="field">
+          <label class="label">City / Città</label>
+          <input class="input" name="citta_fattura_${n}" type="text" placeholder="Venezia" inputmode="text">
+        </div>
+      </div>
+    </div>
   `;
 
   container.appendChild(div);
@@ -1808,6 +1898,9 @@ ${tipoOspiteOptions}
       // Nascondi subito i campi italiani se NON è Italia
       const isItalyCopied = (copiedCittCode === ITALY_CODE) && (copiedStatoCode === ITALY_CODE);
       setItalianDependents(comuneN, provinciaN, comuneR, isItalyCopied);
+      // Imposta visibilità fatturazione per ospiti copiati
+      const tipoVal = div.querySelector(`select[name="tipo_${n}"]`);
+      setBillingFieldsVisibility(div, isItalyCopied, tipoVal ? tipoVal.value : '');
     }
 
     // Helper: controlla se un campo ha valore Italia
@@ -1821,13 +1914,18 @@ ${tipoOspiteOptions}
       const cittName = citt ? citt.value : '';
       const statoCode = stato ? stato.dataset.istat : null;
       const statoName = stato ? stato.value : '';
-      
+
       const isCittIt = isItalyValue(cittCode, cittName);
       const isStatoIt = isItalyValue(statoCode, statoName);
-      
+
       // Mostra i campi italiani SOLO se ENTRAMBI sono Italia
       const showItalianFields = isCittIt && isStatoIt;
       setItalianDependents(comuneN, provinciaN, comuneR, showItalianFields);
+
+      // Aggiorna anche la visibilità dei campi fatturazione
+      const tipoEl = div.querySelector(`select[name="tipo_${n}"]`);
+      const tipoVal = tipoEl ? tipoEl.value : '';
+      setBillingFieldsVisibility(div, showItalianFields, tipoVal);
     };
 
     // *** Register sync listener BEFORE setting up autocompletes ***
@@ -1835,40 +1933,39 @@ ${tipoOspiteOptions}
       const code = citt.dataset.istat;
       const name = citt.value;
 
-      if (code || name) {
-        // Stato nascita auto-uguale alla cittadinanza
-        if (stato) {
-          stato.value = name;
-          stato.dataset.istat = code;
-          stato.dataset.justSelected = 'true';
-          clearFieldError(stato);
-        }
+      // Sincronizza SOLO se c'è un codice ISTAT valido (selezione dalla lista)
+      if (!code) return;
 
-        // Luogo rilascio auto-uguale (solo per primo ospite)
-        // MA solo se il documento NON è italiano (ID/DL) con cittadinanza estera
-        if (ril) {
-          const docSelect = div.querySelector(`select[name="doc_${n}"]`);
-          const docType = docSelect ? docSelect.value : '';
-          const isItalianDoc = (docType === 'ID' || docType === 'DL');
-          const isForeignCitizen = code && code !== ITALY_CODE;
-
-          if (isItalianDoc && isForeignCitizen) {
-            // Per documenti italiani con cittadinanza estera, non auto-compilare con il paese
-            // L'utente deve selezionare il comune italiano di rilascio
-            ril.value = '';
-            delete ril.dataset.istat;
-            delete ril.dataset.justSelected;
-          } else {
-            ril.value = name;
-            ril.dataset.istat = code;
-            ril.dataset.justSelected = 'true';
-            clearFieldError(ril);
-          }
-        }
-
-        // Aggiorna visibilita campi italiani
-        updateItalianFieldsVisibility();
+      // Stato nascita auto-uguale alla cittadinanza
+      if (stato) {
+        stato.value = name;
+        stato.dataset.istat = code;
+        stato.dataset.justSelected = 'true';
+        clearFieldError(stato);
       }
+
+      // Luogo rilascio auto-uguale (solo per primo ospite)
+      // MA solo se il documento NON è italiano (ID/DL) con cittadinanza estera
+      if (ril) {
+        const docSelect = div.querySelector(`select[name="doc_${n}"]`);
+        const docType = docSelect ? docSelect.value : '';
+        const isItalianDoc = (docType === 'ID' || docType === 'DL');
+        const isForeignCitizen = code !== ITALY_CODE;
+
+        if (isItalianDoc && isForeignCitizen) {
+          ril.value = '';
+          delete ril.dataset.istat;
+          delete ril.dataset.justSelected;
+        } else {
+          ril.value = name;
+          ril.dataset.istat = code;
+          ril.dataset.justSelected = 'true';
+          clearFieldError(ril);
+        }
+      }
+
+      // Aggiorna visibilita campi italiani
+      updateItalianFieldsVisibility();
     };
 
     // Listen to change event
@@ -1920,31 +2017,6 @@ ${tipoOspiteOptions}
     }
 
     // Se l'utente modifica manualmente i campi, prova a mappare automaticamente al codice ISTAT al blur
-    const tryMapIstat = (el) => {
-      try {
-        if (!el) return;
-        const val = (el.value || "").trim();
-        if (!val) return;
-        if (el.dataset && el.dataset.istat) return; // già impostato
-        const normalize = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/["'`]/g,'').replace(/\s+/g,' ').trim();
-        const v = normalize(val);
-        // cerca corrispondenza esatta o parziale in STATI_DATA
-        let found = null;
-        if (window.STATI_DATA && Array.isArray(window.STATI_DATA)) {
-          found = window.STATI_DATA.find(x => normalize(x.nome) === v) || window.STATI_DATA.find(x => normalize(x.nome).includes(v)) || window.STATI_DATA.find(x => v.includes(normalize(x.nome)));
-        } else if (typeof stati !== 'undefined' && Array.isArray(stati)) {
-          found = stati.find(x => normalize(x.nome) === v) || stati.find(x => normalize(x.nome).includes(v)) || stati.find(x => v.includes(normalize(x.nome)));
-        }
-        if (found) {
-          el.dataset.istat = found.sigla || found.codice;
-        }
-      } catch(e){ /* ignore */ }
-    };
-
-    if (citt) citt.addEventListener('blur', () => tryMapIstat(citt));
-    if (stato) stato.addEventListener('blur', () => tryMapIstat(stato));
-    if (ril) ril.addEventListener('blur', () => tryMapIstat(ril));
-
     // initial visibility for Italian-dependent fields
     // Per il primo ospite, nascondi sempre inizialmente
     // Per gli ospiti successivi, è già stato gestito sopra dopo la copia
@@ -1966,8 +2038,18 @@ ${tipoOspiteOptions}
     // when stato (birth country) changes, ensure dependents show/hide
     if (stato) {
       stato.addEventListener('change', () => {
-        // Aggiorna visibilita campi italiani basandosi su ENTRAMBI cittadinanza E stato nascita
         updateItalianFieldsVisibility();
+      });
+    }
+
+    // Quando cambia il tipo ospite, aggiorna visibilità campi fatturazione
+    const tipoElBilling = div.querySelector(`select[name="tipo_${n}"]`);
+    if (tipoElBilling) {
+      tipoElBilling.addEventListener('change', () => {
+        const cittCode = citt ? citt.dataset.istat : null;
+        const statoCode = stato ? stato.dataset.istat : null;
+        const isItalian = (cittCode === ITALY_CODE) && (statoCode === ITALY_CODE);
+        setBillingFieldsVisibility(div, isItalian, tipoElBilling.value);
       });
     }
 
@@ -2179,9 +2261,12 @@ function validateItalianRequirements(blockIndex) {
   // If structure is missing, fail safely
   if (!citt || !stato) return false;
 
-  // NUOVA LOGICA: campi italiani obbligatori solo se ENTRAMBI cittadinanza E stato nascita sono Italia
-  const isCittItalian = (citt.value || "").toLowerCase().includes("italia");
-  const isStatoItalian = (stato.value || "").toLowerCase().includes("italia");
+  // Campi italiani obbligatori solo se ENTRAMBI cittadinanza E stato nascita sono Italia
+  // Usiamo dataset.istat (codice ISTAT) come fonte di verità, con fallback su testo
+  const cittCode = citt.dataset && citt.dataset.istat ? citt.dataset.istat : null;
+  const statoCode = stato.dataset && stato.dataset.istat ? stato.dataset.istat : null;
+  const isCittItalian = cittCode === ITALY_CODE || (citt.value || "").toLowerCase().includes("italia");
+  const isStatoItalian = statoCode === ITALY_CODE || (stato.value || "").toLowerCase().includes("italia");
   const requireItalianFields = isCittItalian && isStatoItalian;
 
   const comuneNascita = document.querySelector(`input[name="comune_${i}"]`);
@@ -2248,7 +2333,14 @@ function buildPayload() {
         luogoRilascioNome: (get("ril").value || "").toString().trim(),
 
         comuneResidenza: (get("res").dataset && get("res").dataset.istat) || "",
-        comuneResidenzaNome: (get("res").value || "").toString().trim()
+        comuneResidenzaNome: (get("res").value || "").toString().trim(),
+
+        // Dati fatturazione (solo email, non TXT/XML)
+        codiceFiscale:     (get("cf").value || "").toString().trim().toUpperCase(),
+        indirizzoFattura:  (get("indirizzo").value || "").toString().trim(),
+        civicoFattura:     (get("civico").value || "").toString().trim(),
+        capFattura:        (get("cap").value || "").toString().trim(),
+        cittaFattura:      (get("citta_fattura").value || "").toString().trim()
       });
   });
 
@@ -2322,19 +2414,19 @@ document.getElementById("precheckinForm").onsubmit = (e) => {
     return;
   }
 
-  // Ensure select-based fields were chosen from lists (no manual free text)
+  // Tutti i campi autocompletamento devono avere un valore selezionato dalla lista JSON
   const selCheck = checkRequiredSelects();
   if (!selCheck.ok) {
-    statusEl.textContent = "Please select valid values from the suggestions (no manual input).";
+    statusEl.textContent = "Select values from the list, do not type manually / Seleziona i valori dalla lista, non digitare manualmente.";
     statusEl.classList.add('error');
     scrollToFirstError();
     return;
   }
 
-  // Patch: validazione aggiuntiva per ISTAT su cittadinanza e stato nascita
+  // Validazione aggiuntiva per ISTAT su cittadinanza e stato nascita
   if (typeof validateGuestFieldsISTAT === 'function') {
     if (!validateGuestFieldsISTAT()) {
-      statusEl.textContent = "Compila tutti i campi selezionando dalla lista (cittadinanza e stato nascita)!";
+      statusEl.textContent = "Select citizenship and birth country from the list / Seleziona cittadinanza e stato nascita dalla lista.";
       statusEl.classList.add('error');
       scrollToFirstError();
       return;
