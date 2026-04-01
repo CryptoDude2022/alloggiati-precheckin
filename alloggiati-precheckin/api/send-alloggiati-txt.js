@@ -194,8 +194,8 @@ export default async function handler(req, res) {
         pad(tipoAlloggiato, 2) +                                              // Tipo Alloggiato (2)
         formatDate(dataArrivo) +                                              // Data Arrivo gg/mm/aaaa (10)
         padNum(clean(g.giorni) || numeroNotti || 1, 2) +                      // Permanenza giorni (2)
-        pad(clean(g.cognome).toUpperCase(), 50) +                             // Cognome (50)
-        pad(clean(g.nome).toUpperCase(), 30) +                                // Nome (30)
+        pad(clean(g.cognome).toLowerCase(), 50) +                             // Cognome (50)
+        pad(clean(g.nome).toLowerCase(), 30) +                                // Nome (30)
         pad(sesso, 1) +                                                       // Sesso 1/2 (1)
         formatDate(clean(g.dataNascita)) +                                    // Data Nascita gg/mm/aaaa (10)
         comuneNascitaTxt +                                                     // Comune Nascita cod. ISTAT (9) - vuoto per stranieri
